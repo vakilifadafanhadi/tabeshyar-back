@@ -64,27 +64,6 @@ namespace tabeshyar_back.Controllers
                 return BadRequest(ex);
             }
         }
-        [HttpPost(template: "[action]")]
-        public async Task<IActionResult> NewUnreadMessages(ModelViews.SmallMessageSystemModelView request)
-        {
-            try
-            {
-                var rcpts = JsonSerializer.Serialize(request.To);
-                var postData = $"op={request.Op}&uname={request.Uname}&pass={request.Pass}&message={request.Message}&to={rcpts}&from={request.From}";
-                var content = new StringContent(postData, Encoding.UTF8, "application/x-www-form-urlencoded");
-                var result = await _httpClient.PostAsync(_baseUrl, content);
-                var responce = await result.Content.ReadAsStringAsync();
-                if (result.IsSuccessStatusCode)
-                {
-                    return Ok(responce);
-                }
-                return BadRequest(responce);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex);
-            }
-        }
         [HttpGet(template:"[action]")]
         public async Task<IActionResult> Outbox() 
         {
@@ -109,22 +88,29 @@ namespace tabeshyar_back.Controllers
                     Message = message
                 });
                 var oldLottery = _db.LatteryCodes.Where(current => current.ProductId == message).FirstOrDefault();
-                var rcpts = new List<string>();
-                rcpts.Add(from);
+                var rcpts = new List<string>
+                {
+                    from
+                };
                 string textMessage = "";
                 if (oldLottery == null)
                     textMessage = "کد موجود نمی باشد.";
-                else if (oldLottery.Owner != null)
+                else if (oldLottery.Owner != null && oldLottery.Owner == from)
                     textMessage = "این کد شما است: " + oldLottery.ResponceCode;
+                else if (oldLottery.Owner != null && oldLottery.Owner != from)
+                    textMessage = "این کد استفاده شده است.";
                 else if (oldLottery.Owner == null)
                 {
                     oldLottery.Owner = from;
                     _db.Entry(oldLottery).State = EntityState.Modified;
-                    textMessage = "این کد جدید است: " + oldLottery.ResponceCode;
+                    var count = _db.LatteryCodes
+                        .Where(current => !string.IsNullOrEmpty(current.Owner)).Count();
+                    textMessage = $"این کد جدید است:  {oldLottery.ResponceCode}\n تا کنون {count} نفر در قرعه کشی شرکت کرده اند.";
                 }
+                string To = JsonSerializer.Serialize(rcpts);
                 try
                 {
-                    var postData = $"op=send&uname=u-9129335812&pass=Med@0901161365&message={textMessage}&to={rcpts}&from={to}";
+                    var postData = $"op=send&uname=u-9129335812&pass=Med@0901161365&message={textMessage}&to={To}&from=3000505";
                     var content = new StringContent(postData, Encoding.UTF8, "application/x-www-form-urlencoded");
                     var result = await _httpClient.PostAsync(_baseUrl, content);
                     var responce = await result.Content.ReadAsStringAsync();
@@ -148,7 +134,7 @@ namespace tabeshyar_back.Controllers
                         _db.SmsOutboxes.Add(
                             new Models.SmsOutbox
                             {
-                                From = to!,
+                                From = "3000505",
                                 Receptions = receptions!,
                                 MessageId = msgId,
                                 Message = textMessage!,
@@ -163,12 +149,6 @@ namespace tabeshyar_back.Controllers
                 {
                     return BadRequest(ex);
                 }
-                _ = Send(new ModelViews.SmallMessageSystemModelView
-                {
-                    
-                });
-                _db.SaveChanges();
-                return Ok();
             }
             catch (Exception ex)
             {
