@@ -1,4 +1,8 @@
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using tabeshyar_back.ModelViews;
+using tabeshyar_back.Repositories;
+
 var builder = WebApplication.CreateBuilder(args);
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 builder.Services.AddCors(options =>
@@ -14,6 +18,15 @@ builder.Services.AddCors(options =>
 builder.Services.AddControllers();
 builder.Services.AddDbContext<tabeshyar_back.TabeshyarDb>(
         options => options.UseSqlServer("name=ConnectionStrings:DefaultConnection"));
+
+var config = new MapperConfiguration(cfg =>
+{
+    cfg.AddProfile(new AutoMapperProfile());
+});
+
+var mapper = config.CreateMapper();
+
+builder.Services.AddSingleton(mapper); builder.Services.AddTransient<IRepositoryWrapper, RepositoryWrapper>();
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {

@@ -7,8 +7,8 @@ namespace tabeshyar_back
         public TabeshyarDb(DbContextOptions<TabeshyarDb> options):base(options)
         {
         }
-        public DbSet<SmsOutbox> SmsOutboxes { get; set; }
-        public DbSet<SmsInbox> SmsInboxes { get; set; }
-        public DbSet<LatteryCode> LatteryCodes { get; set; }
+        public DbSet<SmsOutbox>? SmsOutboxes { get; set; }
+        public DbSet<SmsInbox>? SmsInboxes { get; set; }
+        public DbSet<LatteryCode>? LatteryCodes { get; set; }
     }
 }

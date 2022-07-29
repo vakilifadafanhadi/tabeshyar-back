@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using tabeshyar_back;
 
@@ -11,9 +12,10 @@ using tabeshyar_back;
 namespace tabeshyar_back.Migrations
 {
     [DbContext(typeof(TabeshyarDb))]
-    partial class TabeshyarDbModelSnapshot : ModelSnapshot
+    [Migration("20220728192425_baseentity")]
+    partial class baseentity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -29,10 +31,6 @@ namespace tabeshyar_back.Migrations
 
                     b.Property<DateTime>("CreateDate")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("LatteryName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("ModifyDate")
                         .HasColumnType("datetime2");

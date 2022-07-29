@@ -1,6 +1,6 @@
-﻿namespace tabeshyar_back.Models
+﻿namespace tabeshyar_back.ModelViews
 {
-    public class SmsInbox : BaseEntity
+    public class SmsInboxDto
     {
         public string From { get; set; } = default!;
         public string To { get; set; } = default!;

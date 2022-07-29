@@ -1,10 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace tabeshyar_back.Models
+﻿namespace tabeshyar_back.ModelViews
 {
-    public class SmsOutbox:BaseEntity
+    public class SmsOutboxDto
     {
-        [Required]
         public int MessageId { get; set; }
         public string From { get; set; } = default!;
         public string Message { get; set; } = default!;

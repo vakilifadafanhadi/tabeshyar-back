@@ -2,6 +2,8 @@
 using Microsoft.EntityFrameworkCore;
 using System.Text;
 using System.Text.Json;
+using tabeshyar_back.Repositories;
+using tabeshyar_back.ModelViews;
 
 namespace tabeshyar_back.Controllers
 {
@@ -11,15 +13,15 @@ namespace tabeshyar_back.Controllers
     {
         private readonly HttpClient _httpClient;
         private readonly string _baseUrl;
-        private readonly TabeshyarDb _db;
-        public SmallMessageSystemController(TabeshyarDb db)
+        private readonly IRepositoryWrapper _repositoryWrapper;
+        public SmallMessageSystemController(IRepositoryWrapper repositoryWrapper)
         {
             _httpClient = new HttpClient();
             _baseUrl = "https://ippanel.com/services.jspd";
-            _db = db;
+            _repositoryWrapper = repositoryWrapper;
         }
         [HttpPost(template:"[action]")]
-        public async Task<IActionResult> Send(ModelViews.SmallMessageSystemModelView request)
+        public async Task<IActionResult> Send(SmallMessageSystemModelView request)
         {
             try
             {
@@ -44,17 +46,15 @@ namespace tabeshyar_back.Controllers
                     catch
                     {
                     }
-                    _db.SmsOutboxes.Add(
-                        new Models.SmsOutbox
+                    var newOutBox = await _repositoryWrapper.SmsOutboxRepository.CreateAsync(
+                        new SmsOutboxDto
                         {
-                            CreateAt = DateTime.Now,
                             From = request.From!,
                             Receptions = rcpts!,
                             MessageId = msgId,
                             Message = request.Message!,
-                            Status = status
                         });
-                    _db.SaveChanges();
+                    await _repositoryWrapper.SaveAsync();
                     return Ok(responce);
                 }
                 return BadRequest(responce);
@@ -64,16 +64,24 @@ namespace tabeshyar_back.Controllers
                 return BadRequest(ex);
             }
         }
-        [HttpGet(template:"[action]")]
-        public async Task<IActionResult> Outbox() 
+        [HttpGet(template:"[action]/{pageNumber}/{take}")]
+        public async Task<IActionResult> Outbox([FromRoute] int pageNumber, [FromRoute] int take) 
         {
-            var result = await _db.SmsOutboxes.ToListAsync();
+            var result = new SmsOutboxPagination
+            {
+                Count = await _repositoryWrapper.SmsOutboxRepository.CountAsync(),
+                Data = await _repositoryWrapper.SmsOutboxRepository.GetPaginationAsync(pageNumber, take)
+            };
             return Ok(result);
         }
-        [HttpGet(template: "[action]")]
-        public async Task<IActionResult> Inbox()
+        [HttpGet(template: "[action]/{pageNumber}/{take}")]
+        public async Task<IActionResult> Inbox([FromRoute] int pageNumber, [FromRoute] int take)
         {
-            var result = await _db.SmsInboxes.ToListAsync();
+            var result = new SmsInboxPagination
+            {
+                Data = await _repositoryWrapper.SmsInboxRepository.GetPaginationAsync(pageNumber, take),
+                Count = await _repositoryWrapper.SmsInboxRepository.CountAsync()
+            };
             return Ok(result);
         }
         [HttpGet(template:"[action]")]
@@ -81,13 +89,14 @@ namespace tabeshyar_back.Controllers
         {
             try
             {
-                _db.SmsInboxes.Add(new Models.SmsInbox
-                {
-                    From = from,
-                    To = to,
-                    Message = message
-                });
-                var oldLottery = _db.LatteryCodes.Where(current => current.ProductId == message).FirstOrDefault();
+                var newSmsInbox = await _repositoryWrapper.SmsInboxRepository.CreateAsync(
+                    new SmsInboxDto
+                    {
+                        From = from,
+                        To = to,
+                        Message = message
+                    });
+                var oldLottery = await _repositoryWrapper.LatteryCodeRepository.FindByProductIdAsync(message);
                 var rcpts = new List<string>
                 {
                     from
@@ -102,9 +111,8 @@ namespace tabeshyar_back.Controllers
                 else if (oldLottery.Owner == null)
                 {
                     oldLottery.Owner = from;
-                    _db.Entry(oldLottery).State = EntityState.Modified;
-                    var count = _db.LatteryCodes
-                        .Where(current => !string.IsNullOrEmpty(current.Owner)).Count();
+                    var newLatteryCode = await _repositoryWrapper.LatteryCodeRepository.UpdateAsync(oldLottery);
+                    var count = await _repositoryWrapper.LatteryCodeRepository.CountCurrentLatteryOwnersAsync(oldLottery.LatteryName);
                     textMessage = $"این کد جدید است:  {oldLottery.ResponceCode}\n تا کنون {count} نفر در قرعه کشی شرکت کرده اند.";
                 }
                 string To = JsonSerializer.Serialize(rcpts);
@@ -131,16 +139,15 @@ namespace tabeshyar_back.Controllers
                         {
                         }
                         string receptions = JsonSerializer.Serialize(rcpts);
-                        _db.SmsOutboxes.Add(
-                            new Models.SmsOutbox
+                        var newOutbox = await _repositoryWrapper.SmsOutboxRepository.CreateAsync(
+                            new SmsOutboxDto
                             {
                                 From = "3000505",
                                 Receptions = receptions!,
                                 MessageId = msgId,
                                 Message = textMessage!,
-                                Status = status
                             });
-                        _db.SaveChanges();
+                        await _repositoryWrapper.SaveAsync();
                         return Ok(responce);
                     }
                     return BadRequest(responce);
@@ -155,5 +162,19 @@ namespace tabeshyar_back.Controllers
                 return BadRequest(ex);
             }
         }
+        [HttpGet(template:"[action]")]
+        public async Task<IActionResult> GetContactsList()
+        {
+            try
+            {
+                return Ok(await _repositoryWrapper.SmsInboxRepository.GetContactsAsync());
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+                throw;
+            }
+        }
+
     }
 }
