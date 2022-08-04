@@ -85,32 +85,33 @@ namespace tabeshyar_back.Controllers
             return Ok(result);
         }
         [HttpGet(template:"[action]")]
-        public async Task<IActionResult> New([FromQuery] string from, [FromQuery] string to, [FromQuery] string message)
+        public async Task<IActionResult> New([FromQuery]string ReceiveMessageID, [FromQuery]string Mobile, [FromQuery]string LineNumber, [FromQuery]string SMSMessageText, [FromQuery]string ReceiveDateTime)
         {
             try
             {
                 var newSmsInbox = await _repositoryWrapper.SmsInboxRepository.CreateAsync(
                     new SmsInboxDto
                     {
-                        From = from,
-                        To = to,
-                        Message = message
+                        From = Mobile,
+                        To = LineNumber,
+                        Message = SMSMessageText,
+                        MessageId = ReceiveMessageID,
                     });
-                var oldLottery = await _repositoryWrapper.LatteryCodeRepository.FindByProductIdAsync(message);
+                var oldLottery = await _repositoryWrapper.LatteryCodeRepository.FindByProductIdAsync(SMSMessageText);
                 var rcpts = new List<string>
                 {
-                    from
+                    Mobile
                 };
                 string textMessage = "";
                 if (oldLottery == null)
                     textMessage = "کد موجود نمی باشد.";
-                else if (oldLottery.Owner != null && oldLottery.Owner == from)
+                else if (oldLottery.Owner != null && oldLottery.Owner == Mobile)
                     textMessage = "این کد شما است: " + oldLottery.ResponceCode;
-                else if (oldLottery.Owner != null && oldLottery.Owner != from)
+                else if (oldLottery.Owner != null && oldLottery.Owner != Mobile)
                     textMessage = "این کد استفاده شده است.";
                 else if (oldLottery.Owner == null)
                 {
-                    oldLottery.Owner = from;
+                    oldLottery.Owner = Mobile;
                     var newLatteryCode = await _repositoryWrapper.LatteryCodeRepository.UpdateAsync(oldLottery);
                     var count = await _repositoryWrapper.LatteryCodeRepository.CountCurrentLatteryOwnersAsync(oldLottery.LatteryName);
                     textMessage = $"این کد جدید است:  {oldLottery.ResponceCode}\n تا کنون {count} نفر در قرعه کشی شرکت کرده اند.";
@@ -139,6 +140,10 @@ namespace tabeshyar_back.Controllers
                         {
                         }
                         string receptions = JsonSerializer.Serialize(rcpts);
+                        //var client = new AmootSMS.AmootSMSWebService2SoapClient(
+                        //    AmootSMS.AmootSMSWebService2SoapClient.EndpointConfiguration.AmootSMSWebService2Soap12,
+                        //    "https://portal.amootsms.com/webservice2.asmx");
+                        //client.SendSimpleAsync("")
                         var newOutbox = await _repositoryWrapper.SmsOutboxRepository.CreateAsync(
                             new SmsOutboxDto
                             {

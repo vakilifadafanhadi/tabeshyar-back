@@ -56,7 +56,7 @@ namespace tabeshyar_back.Repositories
             if (disposing)
             {
                 _repositoryContext!.Dispose();
-                _repositoryContext = null;
+                _repositoryContext = null!;
             }
         }
     }
