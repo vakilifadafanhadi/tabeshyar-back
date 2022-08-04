@@ -44,5 +44,5 @@ app.UseEndpoints(endpoints =>
 {
     endpoints.MapControllers()
              .RequireCors(MyAllowSpecificOrigins);
-}); 
+});
 app.Run();
